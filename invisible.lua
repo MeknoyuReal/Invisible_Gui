@@ -5,200 +5,232 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
--- GUI
+-- ================== GUI ==================
 local gui = Instance.new("ScreenGui")
-gui.Name = "InvGodGUI"
+gui.Name = "UniversalGUI"
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
+pcall(function() gui.Parent = game:GetService("CoreGui") end)
+if not gui.Parent then gui.Parent = player:WaitForChild("PlayerGui") end
 
-pcall(function()
-    gui.Parent = game:GetService("CoreGui")
-end)
-if not gui.Parent then
-    gui.Parent = player:WaitForChild("PlayerGui")
-end
-
--- Frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 220)
-frame.Position = UDim2.new(0.5, -130, 0.5, -110)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Size = UDim2.new(0, 240, 0, 220)
+frame.Position = UDim2.new(0.5, -120, 0.5, -110)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
 frame.Parent = gui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 
--- Title
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,0,0,36)
+title.Size = UDim2.new(1, 0, 0, 35)
 title.BackgroundTransparency = 1
-title.Text = "Invisible + God GUI"
+title.Text = "Universal GUI"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
-title.TextColor3 = Color3.fromRGB(255,80,80)
+title.Font = Enum.Font.GothamBold
 title.Parent = frame
 
--- Status
-local invText = Instance.new("TextLabel")
-invText.Size = UDim2.new(1,0,0,28)
-invText.Position = UDim2.new(0,0,0.25,0)
-invText.BackgroundTransparency = 1
-invText.Text = "Invisible: OFF"
-invText.TextScaled = true
-invText.Parent = frame
+-- Status labels
+local invisStatus = Instance.new("TextLabel")
+invisStatus.Size = UDim2.new(0.9,0,0,20)
+invisStatus.Position = UDim2.new(0.05,0,0.25,0)
+invisStatus.BackgroundTransparency = 1
+invisStatus.Text = "Invisible: OFF"
+invisStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+invisStatus.TextScaled = true
+invisStatus.Parent = frame
 
-local godText = Instance.new("TextLabel")
-godText.Size = UDim2.new(1,0,0,28)
-godText.Position = UDim2.new(0,0,0.40,0)
-godText.BackgroundTransparency = 1
-godText.Text = "God Mode: OFF"
-godText.TextScaled = true
-godText.Parent = frame
+local godStatus = Instance.new("TextLabel")
+godStatus.Size = UDim2.new(0.9,0,0,20)
+godStatus.Position = UDim2.new(0.05,0,0.35,0)
+godStatus.BackgroundTransparency = 1
+godStatus.Text = "God Mode: OFF"
+godStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+godStatus.TextScaled = true
+godStatus.Parent = frame
 
--- Buttons
+-- Button Invisible
 local invBtn = Instance.new("TextButton")
 invBtn.Size = UDim2.new(0.9,0,0,40)
-invBtn.Position = UDim2.new(0.05,0,0.60,0)
-invBtn.Text = "TOGGLE INVISIBLE"
-invBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+invBtn.Position = UDim2.new(0.05,0,0.48,0)
+invBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+invBtn.Text = "Toggle Invisible"
+invBtn.TextColor3 = Color3.new(1,1,1)
 invBtn.TextScaled = true
 invBtn.Parent = frame
 Instance.new("UICorner", invBtn)
 
+-- Button God Mode
 local godBtn = Instance.new("TextButton")
 godBtn.Size = UDim2.new(0.9,0,0,40)
-godBtn.Position = UDim2.new(0.05,0,0.78,0)
-godBtn.Text = "TOGGLE GOD MODE"
-godBtn.BackgroundColor3 = Color3.fromRGB(0,170,100)
+godBtn.Position = UDim2.new(0.05,0,0.68,0)
+godBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+godBtn.Text = "Toggle God Mode"
+godBtn.TextColor3 = Color3.new(1,1,1)
 godBtn.TextScaled = true
 godBtn.Parent = frame
 Instance.new("UICorner", godBtn)
 
--- Close
-local close = Instance.new("TextButton")
-close.Size = UDim2.new(0,28,0,28)
-close.Position = UDim2.new(1,-32,0,5)
-close.Text = "X"
-close.BackgroundColor3 = Color3.fromRGB(200,0,0)
-close.Parent = frame
+-- Mini button & Close
+local mini = Instance.new("TextButton")
+mini.Size = UDim2.new(0, 50, 0, 50)
+mini.Position = UDim2.new(0, 20, 0.5, 0)
+mini.BackgroundColor3 = Color3.fromRGB(30,30,30)
+mini.Text = "●"
+mini.TextColor3 = Color3.new(1,0,0)
+mini.TextScaled = true
+mini.Visible = false
+mini.Parent = gui
+Instance.new("UICorner", mini).CornerRadius = UDim.new(1,0)
 
--- ✅ DRAG FIX (bisa mouse + touch)
-local dragging = false
-local dragStart, startPos
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0, 5)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1,0,0)
+closeBtn.TextScaled = true
+closeBtn.Parent = frame
 
+-- Drag GUI
+local dragging, dragStart, startPos
 frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
         startPos = frame.Position
     end
 end)
 
-frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch then
-        if dragging then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
-frame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
 end)
 
--- Character helper
+closeBtn.MouseButton1Click:Connect(function()
+    frame.Visible = false
+    mini.Visible = true
+end)
+
+mini.MouseButton1Click:Connect(function()
+    frame.Visible = true
+    mini.Visible = false
+end)
+
+-- ================== FUNCTIONS ==================
 local function getChar()
     return player.Character or player.CharacterAdded:Wait()
 end
 
--- 🔥 INVISIBLE
-local invisible = false
-local function setInvisible(state)
-    local char = getChar()
-    for _,v in ipairs(char:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-            v.Transparency = state and 1 or 0
-            v.LocalTransparencyModifier = state and 1 or 0
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v.Transparency = state and 1 or 0
-        end
-    end
+local function updateCharacter()
+    character = getChar()
 end
+player.CharacterAdded:Connect(updateCharacter)
+
+-- ================== INVISIBLE ==================
+local invis = false
+local originalTransparency = {}
 
 invBtn.MouseButton1Click:Connect(function()
-    invisible = not invisible
-    setInvisible(invisible)
-    invText.Text = "Invisible: " .. (invisible and "ON" or "OFF")
+    invis = not invis
+    local char = getChar()
+    
+    if invis then
+        -- Simpan transparency asli
+        for _, v in pairs(char:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name \~= "HumanoidRootPart" then
+                originalTransparency[v] = v.Transparency
+                v.Transparency = 0.75          -- agak transparan biar masih keliatan sendiri
+            elseif v:IsA("Decal") then
+                v.Transparency = 1
+            end
+        end
+        
+        -- NetworkOwnership trick (bikin agak susah keliatan di beberapa game)
+        pcall(function()
+            char.HumanoidRootPart:SetNetworkOwner(nil)
+        end)
+        
+        invisStatus.Text = "Invisible: ON"
+        invisStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
+    else
+        -- Kembalikan ke semula
+        for part, trans in pairs(originalTransparency) do
+            if part and part.Parent then
+                part.Transparency = trans
+            end
+        end
+        originalTransparency = {}
+        
+        invisStatus.Text = "Invisible: OFF"
+        invisStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
 end)
 
--- 🛡️ GOD MODE (client-side)
+-- ================== GOD MODE (lebih kuat) ==================
 local god = false
-local godConn
 
-local function enableGod()
-    local char = getChar()
-    local hum = char:WaitForChild("Humanoid")
-
-    -- jaga HP terus
-    godConn = RunService.Heartbeat:Connect(function()
-        if hum and hum.Parent then
-            hum.Health = hum.MaxHealth
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-        end
-    end)
-
-    -- cegah reset state mati
-    hum.Died:Connect(function()
-        if god then
-            task.wait()
-            hum.Health = hum.MaxHealth
-        end
-    end)
-end
-
-local function disableGod()
-    if godConn then
-        godConn:Disconnect()
-        godConn = nil
-    end
+RunService.Heartbeat:Connect(function()
+    if not god then return end
+    
     local char = getChar()
     local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+    if not hum then return end
+    
+    -- Heal pelan + anti one-shot
+    if hum.Health < hum.MaxHealth then
+        hum.Health = math.min(hum.MaxHealth, hum.Health + 4)
     end
-end
+    
+    -- Anti fall damage & forcefield-like
+    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+end)
+
+-- Extra protection (jika ada damage mendadak)
+player.CharacterAdded:Connect(function(char)
+    if god then
+        task.wait(0.5)
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.Health = hum.MaxHealth
+        end
+    end
+end)
 
 godBtn.MouseButton1Click:Connect(function()
     god = not god
-
     if god then
-        enableGod()
+        godStatus.Text = "God Mode: ON"
+        godStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
+        
+        -- Heal sekali langsung
+        local hum = getChar():FindFirstChildOfClass("Humanoid")
+        if hum then hum.Health = hum.MaxHealth end
     else
-        disableGod()
+        godStatus.Text = "God Mode: OFF"
+        godStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
-
-    godText.Text = "God Mode: " .. (god and "ON" or "OFF")
 end)
 
--- Close
-close.MouseButton1Click:Connect(function()
-    gui:Destroy()
-end)
+print("✅ UNIVERSAL SCRIPT LOADED - Invisible + God Mode Improved")
 
--- Respawn fix
+-- Auto update character
 player.CharacterAdded:Connect(function()
     task.wait(1)
-    if invisible then setInvisible(true) end
-    if god then enableGod() end
+    if invis then
+        -- re-apply invisible kalau respawn
+        invBtn.MouseButton1Click:Fire() -- off dulu
+        task.wait(0.1)
+        invBtn.MouseButton1Click:Fire() -- on lagi
+    end
 end)
-
-print("✅ GUI Loaded (Drag + Invisible + God Mode)")
