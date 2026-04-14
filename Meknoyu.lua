@@ -2,31 +2,27 @@
 local plr = game.Players.LocalPlayer
 local rs = game:GetService("RunService")
 local players = game:GetService("Players")
-local lighting = game:GetService("Lighting")
 local starterGui = game:GetService("StarterGui")
 
--- Notifikasi Konsisten
+-- Notification Paten
 starterGui:SetCore("SendNotification", {
     Title = "Meknoyu GUI",
-    Text = "Meknoyu Gui Loaded!!",
+    Text = "Meknoyu System Loaded!",
     Duration = 5
 })
 
-local function playPop()
-    local s = Instance.new("Sound", workspace)
-    s.SoundId = "rbxassetid://6895079853"
-    s.Volume = 0.5
-    s:Play()
-    game.Debris:AddItem(s, 1)
-end
-
--- GUI Parent
+-- Parent GUI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "Meknoyu_Stable_Final"
+screenGui.Name = "Mekno_Clean_Final"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = (gethui and gethui()) or plr:WaitForChild("PlayerGui")
 
 local char, hum, hrp
+local godConnection = nil
+local forceField = nil
+local originalMaxHealth = 100
+local flingConnection = nil
+
 local function setupChar(c)
     char = c
     hum = c:WaitForChild("Humanoid", 10)
@@ -35,175 +31,186 @@ end
 if plr.Character then setupChar(plr.Character) end
 plr.CharacterAdded:Connect(setupChar)
 
--- Main Frame
+-- Frame UI
 local main = Instance.new("Frame", screenGui)
 main.Size = UDim2.new(0, 360, 0, 540)
 main.Position = UDim2.new(0.5, -180, 0.2, 0)
-main.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 main.Active = true
 main.Draggable = true
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", main)
 
 local stroke = Instance.new("UIStroke", main)
 stroke.Thickness = 2.5
 rs.RenderStepped:Connect(function()
-    stroke.Color = Color3.fromHSV((tick() * 0.25) % 1, 0.8, 1)
+    stroke.Color = Color3.fromHSV((tick() * 0.2) % 1, 0.8, 1)
 end)
 
 -- Header
 local header = Instance.new("TextLabel", main)
 header.Size = UDim2.new(1, 0, 0, 45)
 header.Text = "MEKNOYU GUI"
-header.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+header.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 header.TextColor3 = Color3.new(1,1,1)
-header.Font = Enum.Font.GothamBold
-header.TextSize = 18
+header.Font = Enum.Font.GothamBold; header.TextSize = 18
 Instance.new("UICorner", header)
 
 local closeBtn = Instance.new("TextButton", main)
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -35, 0, 7)
+closeBtn.Size = UDim2.new(0, 30, 0, 30); closeBtn.Position = UDim2.new(1, -35, 0, 7)
 closeBtn.Text = "X"; closeBtn.TextColor3 = Color3.new(1,0,0); closeBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
 Instance.new("UICorner", closeBtn)
 
 local miniBtn = Instance.new("TextButton", screenGui)
-miniBtn.Size = UDim2.new(0, 45, 0, 45)
-miniBtn.Position = UDim2.new(0.02, 0, 0.1, 0)
-miniBtn.Text = "M"; miniBtn.Visible = false; miniBtn.BackgroundColor3 = Color3.fromRGB(25,25,25); miniBtn.TextColor3 = Color3.new(1,1,1)
+miniBtn.Size = UDim2.new(0, 45, 0, 45); miniBtn.Position = UDim2.new(0.02, 0, 0.1, 0)
+miniBtn.Text = "M"; miniBtn.Visible = false; miniBtn.BackgroundColor3 = Color3.fromRGB(20,20,20); miniBtn.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(1,0)
 
-closeBtn.MouseButton1Click:Connect(function() playPop(); main.Visible = false; miniBtn.Visible = true end)
-miniBtn.MouseButton1Click:Connect(function() playPop(); main.Visible = true; miniBtn.Visible = false end)
+closeBtn.MouseButton1Click:Connect(function() main.Visible = false; miniBtn.Visible = true end)
+miniBtn.MouseButton1Click:Connect(function() main.Visible = true; miniBtn.Visible = false end)
 
--- Scrolling Frame
 local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1, -20, 1, -70)
-scroll.Position = UDim2.new(0, 10, 0, 55)
-scroll.BackgroundTransparency = 1
-scroll.CanvasSize = UDim2.new(0,0,2.5,0)
-scroll.ScrollBarThickness = 2
+scroll.Size = UDim2.new(1, -20, 1, -70); scroll.Position = UDim2.new(0, 10, 0, 55); scroll.BackgroundTransparency = 1
+scroll.CanvasSize = UDim2.new(0,0,2.5,0); scroll.ScrollBarThickness = 2
+local grid = Instance.new("UIGridLayout", scroll); grid.CellSize = UDim2.new(0.48, 0, 0, 40); grid.CellPadding = UDim2.new(0.02, 0, 0.02, 0)
 
-local grid = Instance.new("UIGridLayout", scroll)
-grid.CellSize = UDim2.new(0.48, 0, 0, 40)
-grid.CellPadding = UDim2.new(0.02, 0, 0.02, 0)
+-- State & Toggle
+local states = {god=false, noclip=false, esp=false, fling=false, infJump=false, speed=false, check=false, title=false, fps=false, fog=false, antirag=false}
 
-local function createBtn(name, isToggle)
-    local b = Instance.new("TextButton", scroll)
-    b.Text = isToggle and (name .. " : OFF") or name
-    b.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamSemibold; b.TextSize = 12
-    Instance.new("UICorner", b)
-    return b
+-- Fling Functions (No Spin - No Forward - Noclip Player)
+local function stopFling()
+    states.fling = false
+    if flingConnection then flingConnection:Disconnect(); flingConnection = nil end
+    if hrp then hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0) end
 end
 
--- SEMUA TOMBOL
-local states = {god=false, noclip=false, esp=false, fps=false, fling=false, infJump=false, antiRag=false, speed=false, fog=false, check=false, title=false}
-
-local godBtn = createBtn("God Mode", true)
-local noclipBtn = createBtn("Noclip", true)
-local espBtn = createBtn("ESP", true)
-local fpsBtn = createBtn("FPS Boost", true)
-local flingBtn = createBtn("Fling", true)
-local infJumpBtn = createBtn("Inf Jump", true)
-local antiRagBtn = createBtn("Anti Ragdoll", true)
-local speedBtn = createBtn("Speed", true)
-local fogBtn = createBtn("Remove Fog", true)
-local checkBtn = createBtn("Check Account", true)
-local titleBtn = createBtn("Custom Title", true)
-local dexBtn = createBtn("Dark Dex", false)
-
--- ==================== CORE FUNCTIONS ====================
-
-local function addVisuals(p)
-    if p == plr then return end
-    local c = p.Character
-    if not c then return end
-    local h = c:WaitForChild("Head", 5)
-    local hrpP = c:WaitForChild("HumanoidRootPart", 5)
-
-    if states.check and h and not h:FindFirstChild("MeknoCheck") then
-        local b = Instance.new("BillboardGui", h); b.Name = "MeknoCheck"; b.Size = UDim2.new(0,180,0,80); b.AlwaysOnTop = true; b.ExtentsOffset = Vector3.new(0,5,0)
-        local t = Instance.new("TextLabel", b); t.Size = UDim2.new(1,0,1,0); t.BackgroundTransparency = 0.5; t.BackgroundColor3 = Color3.new(0,0,0); t.TextColor3 = Color3.new(1,1,0); t.TextSize = 11
-        t.Text = "User: "..p.Name.."\nID: "..p.UserId.."\nAge: "..p.AccountAge.."d"
-        Instance.new("UICorner", t)
-    end
-
-    if states.esp and hrpP then
-        if not c:FindFirstChild("MeknoBox") then
-            local box = Instance.new("BoxHandleAdornment", c); box.Name = "MeknoBox"; box.Size = Vector3.new(4,6,2); box.AlwaysOnTop = true; box.ZIndex = 5; box.Color3 = Color3.new(1,0,0); box.Transparency = 0.6; box.Adornee = c
-        end
-        if not hrpP:FindFirstChild("MeknoTracer") then
-            local tb = Instance.new("BillboardGui", hrpP); tb.Name = "MeknoTracer"; tb.Size = UDim2.new(0,1.5,2000,0); tb.AlwaysOnTop = true; tb.ExtentsOffset = Vector3.new(0,-1000,0)
-            local f = Instance.new("Frame", tb); f.Size = UDim2.new(1,0,1,0); f.BackgroundColor3 = Color3.new(1,1,1); f.BorderSizePixel = 0; f.BackgroundTransparency = 0.4
-        end
-    end
-end
-
--- Tombol Actions
-checkBtn.MouseButton1Click:Connect(function()
-    states.check = not states.check
-    checkBtn.Text = "Check Account : " .. (states.check and "ON" or "OFF")
-    if states.check then for _, v in pairs(players:GetPlayers()) do addVisuals(v) end 
-    else for _, v in pairs(players:GetPlayers()) do if v.Character and v.Character:FindFirstChild("Head") and v.Character.Head:FindFirstChild("MeknoCheck") then v.Character.Head.MeknoCheck:Destroy() end end end
-end)
-
-espBtn.MouseButton1Click:Connect(function()
-    states.esp = not states.esp
-    espBtn.Text = "ESP : " .. (states.esp and "ON" or "OFF")
-    if states.esp then for _, v in pairs(players:GetPlayers()) do addVisuals(v) end
-    else for _, v in pairs(players:GetPlayers()) do if v.Character then if v.Character:FindFirstChild("MeknoBox") then v.Character.MeknoBox:Destroy() end if v.Character:FindFirstChild("HumanoidRootPart") and v.Character.HumanoidRootPart:FindFirstChild("MeknoTracer") then v.Character.HumanoidRootPart.MeknoTracer:Destroy() end end end end
-end)
-
-godBtn.MouseButton1Click:Connect(function() states.god = not states.god; godBtn.Text = "God Mode : " .. (states.god and "ON" or "OFF") end)
-noclipBtn.MouseButton1Click:Connect(function() states.noclip = not states.noclip; noclipBtn.Text = "Noclip : " .. (states.noclip and "ON" or "OFF") end)
-speedBtn.MouseButton1Click:Connect(function() states.speed = not states.speed; speedBtn.Text = "Speed : " .. (states.speed and "ON" or "OFF") end)
-flingBtn.MouseButton1Click:Connect(function() states.fling = not states.fling; flingBtn.Text = "Fling : " .. (states.fling and "ON" or "OFF") end)
-infJumpBtn.MouseButton1Click:Connect(function() states.infJump = not states.infJump; infJumpBtn.Text = "Inf Jump : " .. (states.infJump and "ON" or "OFF") end)
-antiRagBtn.MouseButton1Click:Connect(function() states.antiRag = not states.antiRag; antiRagBtn.Text = "Anti Ragdoll : " .. (states.antiRag and "ON" or "OFF") end)
-fpsBtn.MouseButton1Click:Connect(function() states.fps = not states.fps; fpsBtn.Text = "FPS Boost : " .. (states.fps and "ON" or "OFF"); settings().Rendering.QualityLevel = states.fps and 1 or 0 end)
-fogBtn.MouseButton1Click:Connect(function() states.fog = not states.fog; fogBtn.Text = "Remove Fog : " .. (states.fog and "ON" or "OFF"); lighting.FogEnd = states.fog and 100000 or 1000 end)
-dexBtn.MouseButton1Click:Connect(function() playPop(); loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))() end)
-
-titleBtn.MouseButton1Click:Connect(function()
-    states.title = not states.title
-    titleBtn.Text = "Custom Title : " .. (states.title and "ON" or "OFF")
-    if states.title and char:FindFirstChild("Head") then
-        local b = Instance.new("BillboardGui", char.Head); b.Name = "MeknoTitle"; b.Size = UDim2.new(0,250,0,50); b.StudsOffset = Vector3.new(0,3,0); b.AlwaysOnTop = true
-        local l = Instance.new("TextLabel", b); l.Size = UDim2.new(1,0,1,0); l.BackgroundTransparency = 1; l.Text = "you scared but noob hahaha"; l.TextColor3 = Color3.new(1,0,0); l.Font = Enum.Font.GothamBold; l.TextSize = 20
-    elseif char:FindFirstChild("Head") and char.Head:FindFirstChild("MeknoTitle") then char.Head.MeknoTitle:Destroy() end
-end)
-
--- ==================== LOOPS ====================
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    if states.infJump and hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-end)
-
-rs.Heartbeat:Connect(function()
-    if not char or not hrp or not hum then return end
-    if states.god then hum.Health = hum.MaxHealth end
-    if states.speed and hum.MoveDirection.Magnitude > 0 then hrp.CFrame = hrp.CFrame + (hum.MoveDirection * 1.4) end
-    if states.noclip then for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
-    if states.antiRag and hum:GetState() == Enum.HumanoidStateType.Physics then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
-    
-    -- FIXED FLING (STABLE)
-    if states.fling then
-        local oldVelocity = hrp.Velocity
-        hrp.Velocity = oldVelocity * Vector3.new(0, 0, 0) + Vector3.new(0, 0.5, 0) -- Jaga ketinggian sedikit biar ga nyungsep
-        hrp.RotVelocity = Vector3.new(0, 10000, 0) -- Hanya putar super cepat
+local function startFling()
+    if not hrp or not hum then return end
+    states.fling = true
+    flingConnection = rs.Heartbeat:Connect(function()
+        if not states.fling or not hrp then stopFling(); return end
         
-        -- Deteksi lawan terdekat buat di-fling
-        for _, p in pairs(players:GetPlayers()) do
-            if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local targetHrp = p.Character.HumanoidRootPart
-                if (hrp.Position - targetHrp.Position).Magnitude < 8 then
-                    -- Berikan gaya dorong ke lawan saat bersentuhan
-                    targetHrp.Velocity = Vector3.new(10000, 10000, 10000)
+        -- Karakter bisa nembus player lain (Collision Group Trick / Physics)
+        for _, v in pairs(char:GetChildren()) do
+            if v:IsA("BasePart") then v.CanTouch = false end -- Biar ga tabrakan physics
+        end
+
+        for _, other in pairs(players:GetPlayers()) do
+            if other ~= plr and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
+                local otherRoot = other.Character.HumanoidRootPart
+                if (hrp.Position - otherRoot.Position).Magnitude < 8 then
+                    local pushDir = (otherRoot.Position - hrp.Position).Unit
+                    -- Push physics tetap aktif saat didekati manual
+                    otherRoot.AssemblyLinearVelocity = pushDir * 110 + Vector3.new(0, 55, 0)
                 end
             end
         end
+    end)
+end
+
+local function createBtn(name, key)
+    local b = Instance.new("TextButton", scroll)
+    b.Text = name .. " : OFF"
+    b.BackgroundColor3 = Color3.fromRGB(30, 30, 35); b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamSemibold; b.TextSize = 10
+    Instance.new("UICorner", b)
+    
+    b.MouseButton1Click:Connect(function()
+        states[key] = not states[key]
+        b.Text = name .. " : " .. (states[key] and "ON" or "OFF")
+        b.BackgroundColor3 = states[key] and Color3.fromRGB(50, 50, 70) or Color3.fromRGB(30, 30, 35)
+        
+        -- GOD MODE (INVISIBLE FORCE FIELD)
+        if key == "god" then
+            if states.god then
+                if hum then
+                    originalMaxHealth = hum.MaxHealth
+                    hum.MaxHealth = math.huge; hum.Health = math.huge
+                    hum.BreakJointsOnDeath = false
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                    if char and not forceField then
+                        forceField = Instance.new("ForceField"); forceField.Visible = false; forceField.Parent = char
+                    end
+                    godConnection = rs.Heartbeat:Connect(function()
+                        if hum and states.god then hum.Health = math.huge; hum.MaxHealth = math.huge end
+                    end)
+                end
+            else
+                if godConnection then godConnection:Disconnect(); godConnection = nil end
+                if forceField then forceField:Destroy(); forceField = nil end
+                if hum then
+                    hum.MaxHealth = originalMaxHealth; hum.Health = originalMaxHealth
+                    hum.BreakJointsOnDeath = true; hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+                end
+            end
+        -- FLING LOGIC
+        elseif key == "fling" then
+            if states.fling then startFling() else stopFling() end
+        -- NOCLIP LOGIC
+        elseif key == "noclip" and not states[key] and char then
+            for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = true end end
+        end
+    end)
+    return b
+end
+
+-- Tombol Urutan Tetap
+createBtn("God Mode", "god")
+createBtn("Noclip", "noclip")
+createBtn("ESP", "esp")
+createBtn("Fling", "fling")
+createBtn("Inf Jump", "infJump")
+createBtn("Speed", "speed")
+createBtn("Check Account", "check")
+createBtn("Custom Title", "title")
+createBtn("FPS Boost", "fps")
+createBtn("Remove Fog", "fog")
+createBtn("Anti Ragdoll", "antirag")
+
+local dexBtn = Instance.new("TextButton", scroll)
+dexBtn.Text = "Dark Dex"; dexBtn.BackgroundColor3 = Color3.fromRGB(30,30,35); dexBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", dexBtn); dexBtn.TextSize = 10
+dexBtn.MouseButton1Click:Connect(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))() end)
+
+-- ==================== SYSTEM LOGIC ====================
+
+local function applyVisuals(p)
+    if p == plr then return end
+    local function setup(c)
+        if not c then return end
+        rs.RenderStepped:Connect(function()
+            if states.esp and c.Parent then
+                local h = c:FindFirstChild("MeknoH") or Instance.new("Highlight", c)
+                h.Name = "MeknoH"; h.FillColor = Color3.new(1,0,0); h.OutlineColor = Color3.new(1,1,1); h.FillTransparency = 0.5
+            else if c:FindFirstChild("MeknoH") then c.MeknoH:Destroy() end end
+            if states.check and c:FindFirstChild("Head") then
+                local head = c.Head
+                local tag = head:FindFirstChild("MeknoCheck") or Instance.new("BillboardGui", head)
+                tag.Name = "MeknoCheck"; tag.Size = UDim2.new(0,160,0,50); tag.AlwaysOnTop = true; tag.ExtentsOffset = Vector3.new(0,3,0)
+                local txt = tag:FindFirstChild("TextLabel") or Instance.new("TextLabel", tag)
+                txt.Size = UDim2.new(1,0,1,0); txt.BackgroundTransparency = 1; txt.TextColor3 = Color3.new(1,1,0); txt.Font = Enum.Font.GothamBold; txt.TextSize = 12; txt.TextStrokeTransparency = 0
+                txt.Text = "User: "..p.Name.."\nAge: "..p.AccountAge.."d"
+            else if c:FindFirstChild("Head") and c.Head:FindFirstChild("MeknoCheck") then c.Head.MeknoCheck:Destroy() end end
+        end)
     end
+    p.CharacterAdded:Connect(setup); if p.Character then setup(p.Character) end
+end
+
+rs.Stepped:Connect(function()
+    if not char or not hum or not hrp then return end
+    if states.noclip then for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
+    if states.speed and hum.MoveDirection.Magnitude > 0 then hrp.CFrame = hrp.CFrame + (hum.MoveDirection * 1.5) end
+    if states.antirag and hum:GetState() == Enum.HumanoidStateType.Physics then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
+    if states.fps then settings().Rendering.QualityLevel = 1 else settings().Rendering.QualityLevel = 0 end
+    if states.fog then game.Lighting.FogEnd = 100000 else game.Lighting.FogEnd = 1000 end
+    if states.title and char:FindFirstChild("Head") then
+        local head = char.Head
+        local tTag = head:FindFirstChild("MeknoTitle") or Instance.new("BillboardGui", head)
+        tTag.Name = "MeknoTitle"; tTag.Size = UDim2.new(0,250,0,50); tTag.AlwaysOnTop = true; tTag.ExtentsOffset = Vector3.new(0,3,0)
+        local tTxt = tTag:FindFirstChild("TextLabel") or Instance.new("TextLabel", tTag)
+        tTxt.Size = UDim2.new(1,0,1,0); tTxt.BackgroundTransparency = 1; tTxt.TextColor3 = Color3.new(1,0,0); tTxt.Font = Enum.Font.GothamBold; tTxt.TextSize = 18; tTxt.Text = "you scared but noob hahaha"
+    elseif char:FindFirstChild("Head") and char.Head:FindFirstChild("MeknoTitle") then char.Head.MeknoTitle:Destroy() end
 end)
 
-players.PlayerAdded:Connect(function(p)
-    if states.esp or states.check then addVisuals(p) end
-end)
+game:GetService("UserInputService").JumpRequest:Connect(function() if states.infJump and hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end)
+plr.CharacterAdded:Connect(function() task.wait(0.4); if states.fling then stopFling(); startFling() end end)
+for _, v in pairs(players:GetPlayers()) do applyVisuals(v) end
+players.PlayerAdded:Connect(applyVisuals)
