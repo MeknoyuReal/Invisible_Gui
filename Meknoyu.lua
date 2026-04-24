@@ -14,14 +14,16 @@ screenGui.Parent = (gethui and gethui()) or plr:WaitForChild("PlayerGui")
 local char, hum, hrp
 local godConnection = nil
 local flingConnection = nil
+local lastPos = nil
 
 local tpTool = Instance.new("Tool"); tpTool.Name = "Mekno TP Tool"; tpTool.RequiresHandle = false
-tpTool.Activated:Connect(function() local mouse = plr:GetMouse() if mouse.Hit and hrp then hrp.CFrame = CFrame.new(mouse.Hit.p + Vector3.new(0, 3, 0)) end end)
+tpTool.Activated:Connect(function() local mouse = plr:GetMouse() if mouse.Hit and hrp then hrp.CFrame = CFrame.new(mouse.Hit.p + Vector3.new(0, 5, 0)) end end)
 
-local states = {god=false, noclip=false, esp=false, fling=false, antifling=false, infJump=false, speed=false, fps=false, title=false, antirag=false, antijail=false, bypass=false, tooltp=false}
+local states = {god=false, noclip=false, esp=false, fling=false, antifling=false, infJump=false, speed=false, fps=false, title=false, antirag=false, antijail=false, bypass=false, tooltp=false, antitel=false}
 
 local function setupChar(c)
     char = c; hum = c:WaitForChild("Humanoid", 10); hrp = c:WaitForChild("HumanoidRootPart", 10)
+    lastPos = hrp.CFrame
     if states.tooltp then tpTool.Parent = plr.Backpack end
 end
 if plr.Character then setupChar(plr.Character) end
@@ -32,7 +34,7 @@ local stroke = Instance.new("UIStroke", main); stroke.Thickness = 2.5; rs.Render
 
 local header = Instance.new("TextLabel", main); header.Size = UDim2.new(1, 0, 0, 45); header.Text = "MEKNOYU GUI"; header.BackgroundColor3 = Color3.fromRGB(25, 25, 25); header.TextColor3 = Color3.new(1,1,1); header.Font = Enum.Font.GothamBold; header.TextSize = 18; Instance.new("UICorner", header)
 local closeBtn = Instance.new("TextButton", main); closeBtn.Size = UDim2.new(0, 30, 0, 30); closeBtn.Position = UDim2.new(1, -35, 0, 7); closeBtn.Text = "X"; closeBtn.TextColor3 = Color3.new(1,0,0); closeBtn.BackgroundColor3 = Color3.fromRGB(40,40,40); Instance.new("UICorner", closeBtn)
-local miniBtn = Instance.new("TextButton", screenGui); miniBtn.Size = UDim2.new(0, 45, 0, 45); miniBtn.Position = UDim2.new(0.02, 0, 0.1, 0); miniBtn.Text = "M"; miniBtn.Visible = false; miniBtn.BackgroundColor3 = Color3.fromRGB(20,20,20); miniBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(1,0)
+local miniBtn = Instance.new("TextButton", screenGui); miniBtn.Size = UDim2.new(0, 45, 0, 45); miniBtn.Position = UDim2.new(0.02, 0, 0.1, 0); miniBtn.Text = "M"; miniBtn.Visible = false; miniBtn.BackgroundColor3 = Color3.fromRGB(20,20,20); miniBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(1,0); miniBtn.Draggable = true
 closeBtn.MouseButton1Click:Connect(function() main.Visible = false; miniBtn.Visible = true end)
 miniBtn.MouseButton1Click:Connect(function() main.Visible = true; miniBtn.Visible = false end)
 
@@ -64,7 +66,7 @@ local function createBtn(name, key)
     end) 
 end
 
-createBtn("God Mode", "god"); createBtn("Noclip", "noclip"); createBtn("ESP", "esp"); createBtn("Fling", "fling"); createBtn("Anti Fling", "antifling"); createBtn("Anti Jail", "antijail"); createBtn("Bypass AC", "bypass"); createBtn("Inf Jump", "infJump"); createBtn("Speed", "speed"); createBtn("FPS Boost", "fps"); createBtn("Custom Title", "title"); createBtn("Anti Ragdoll", "antirag")
+createBtn("God Mode", "god"); createBtn("Noclip", "noclip"); createBtn("ESP", "esp"); createBtn("Fling", "fling"); createBtn("Anti Fling", "antifling"); createBtn("Anti Jail", "antijail"); createBtn("Anti Teleport", "antitel"); createBtn("Bypass AC", "bypass"); createBtn("Inf Jump", "infJump"); createBtn("Speed", "speed"); createBtn("FPS Boost", "fps"); createBtn("Custom Title", "title"); createBtn("Anti Ragdoll", "antirag")
 
 local dexBtn = Instance.new("TextButton", scroll); dexBtn.Text = "Dark Dex"; dexBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 40); dexBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", dexBtn); dexBtn.TextSize = 10
 dexBtn.MouseButton1Click:Connect(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))() end)
@@ -79,6 +81,7 @@ rs.Stepped:Connect(function()
     if states.noclip then for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
     if states.speed and hum.MoveDirection.Magnitude > 0 then hrp.CFrame = hrp.CFrame + (hum.MoveDirection * 1.5) end
     if states.antifling then hrp.AssemblyAngularVelocity = Vector3.new(0,0,0) end
+    if states.antitel then if (hrp.Position - lastPos.Position).Magnitude > 50 then hrp.CFrame = lastPos end else lastPos = hrp.CFrame end
     if states.fps then settings().Rendering.QualityLevel = 1; workspace.GraphicsQuality = 1 end
     
     if states.title then 
@@ -93,5 +96,9 @@ rs.Stepped:Connect(function()
         end
     end
     if states.antijail then for _, v in pairs(workspace:GetDescendants()) do if v:IsA("Model") and (v.Name:lower():find("jail") or v.Name:lower():find("cage")) then v:Destroy() end end end
-    if states.bypass then pcall(function() sethiddenproperty(plr, "MaximumSimulationRadius", math.huge) end) end
+    if states.bypass then 
+        pcall(function() sethiddenproperty(plr, "MaximumSimulationRadius", math.huge) end)
+        local mt = getrawmetatable(game) local nc = mt.__namecall local setreadonly = setreadonly or make_writeable 
+        setreadonly(mt, false) mt.__namecall = newcclosure(function(self, ...) local args = {...} if getnamecallmethod() == "Kick" then return nil end return nc(self, ...) end) setreadonly(mt, true)
+    end
 end)
